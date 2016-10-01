@@ -1,6 +1,8 @@
 package com.example.chango.androidhilos;
 
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -19,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar pbarProgreso;
     private ProgressDialog pDialog;
     private MiTareaAsincrona tarea1;
-//    private MiTareaAsincronaDialog tarea2;
+    private MiTareaAsincronaDialog tarea2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +49,25 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        btnAsyncDialog.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                pDialog = new ProgressDialog(MainActivity.this);
+                pDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+                pDialog.setMessage("Procesando...");
+                pDialog.setCancelable(true);
+                pDialog.setIndeterminate(false);
+                pDialog.setMax(100);
+
+                tarea2 = new MiTareaAsincronaDialog();
+                tarea2.execute();
+            }
+        });
     }
+
+
 
     public void conHilos(View view) {
         new Thread(new Runnable() {
@@ -77,12 +97,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void conAsyncTask(View view) {
-        this.tarea1 = new MiTareaAsincrona();
+        tarea1 = new MiTareaAsincrona();
+        tarea1.execute();
     }
 
 
     public void cancelar(View view) {
-        this.tarea1.onCancelled();
+        this.tarea1.cancel(true);
     }
 
 
@@ -129,6 +150,49 @@ public class MainActivity extends AppCompatActivity {
         protected void onCancelled() {
             Toast.makeText(getApplicationContext(),
                     "Tarea cancelada!",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private class MiTareaAsincronaDialog extends AsyncTask<Void, Integer, Boolean> {
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            for (int i = 1; i <= 10; i++) {
+                tareaLarga();
+                publishProgress(i * 10);
+                if (isCancelled())
+                    break;
+            }
+            return true;
+        }
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            int progreso = values[0].intValue();
+            pDialog.setProgress(progreso);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            pDialog.setOnCancelListener(new OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    MiTareaAsincronaDialog.this.cancel(true);
+                }
+            });
+            pDialog.setProgress(0);
+            pDialog.show();
+        }
+        @Override
+        protected void onPostExecute(Boolean result) {
+            if (result) {
+                pDialog.dismiss();
+                Toast.makeText(getApplicationContext(), "Tarea finalizada!",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+        @Override
+        protected void onCancelled() {
+            Toast.makeText(getApplicationContext(), "Tarea cancelada!",
                     Toast.LENGTH_SHORT).show();
         }
     }
